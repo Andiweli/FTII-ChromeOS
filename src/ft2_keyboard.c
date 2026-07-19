@@ -82,6 +82,10 @@ void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
 	if (editor.editTextFlag || ui.sysReqShown)
 		return; // kludge: don't handle key up! (XXX: Is this hack really needed anymore?)
 
+	// kludge for enter/return during text editing (could cause note trigger)
+	if (keycode == SDLK_RETURN)
+		keyb.ignoreNoteEnterKey = false;
+
 	/* Yet another kludge for not leaving a ghost key-up event after an inputBox/okBox
 	** was exited with a key press. They could be picked up as note release events.
 	*/
