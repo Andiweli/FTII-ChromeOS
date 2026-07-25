@@ -130,21 +130,21 @@
 /*                       CUBIC SPLINE INTERPOLATION                        */
 /* ----------------------------------------------------------------------- */
 
-// Catmull-Rom algorithm
+// Catmull-Rom algorithm (with unity gain)
 #define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
 { \
 	const int32_t frac31 = (uint32_t)f >> 1; /* reduce from uint32_t to int32_t for fast SIMD usage */ \
-	const float x = frac31 * (1.0f / ((float)INT32_MAX+1.0f)); \
+	const float x = (float)frac31 * (1.0f / ((float)INT32_MAX+1.0f)); \
 	\
-	const float v0 = s[-1]; \
-	const float v1 = s[0]; \
-	const float v2 = s[1]; \
-	const float v3 = s[2]; \
+	const float s1 = s[-1]; \
+	const float s2 = s[0]; \
+	const float s3 = s[1]; \
+	const float s4 = s[2]; \
 	\
-	const float c1 = v1; \
-	const float c2 = 0.5f * (v2 - v0); \
-	const float c3 = v0 - (2.5f * v1) + (2.0f * v2) - (0.5f * v3); \
-	const float c4 = 0.5f * (v3 - v0) + 1.5f * (v1 - v2); \
+	const float c1 = s2; \
+	const float c2 = 0.5f * (s3 - s1); \
+	const float c3 = s1 - (2.5f * s2) + (2.0f * s3) - (0.5f * s4); \
+	const float c4 = 0.5f * (s4 - s1) + 1.5f * (s2 - s3); \
 	\
 	fSample = (((c4 * x + c3) * x + c2) * x + c1) * (1.0f / scale); \
 }
