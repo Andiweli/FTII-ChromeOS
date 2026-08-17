@@ -1,0 +1,74 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.ast.ft2clone"
+    compileSdk 35
+    buildToolsVersion "35.0.0"
+    ndkVersion "27.2.12479018"
+
+    defaultConfig {
+        applicationId "com.ast.ft2clone"
+        minSdk 28
+        targetSdk 35
+        versionCode 10010
+        versionName "1.0.10-chromeos"
+
+        ndk {
+            abiFilters "arm64-v8a", "x86_64"
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_static"
+                cppFlags "-std=c++17"
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            versionNameSuffix "-debug"
+            debuggable true
+        }
+
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file("src/main/cpp/CMakeLists.txt")
+            version "3.22.1"
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += ["../third_party/SDL2/android-project/app/src/main/java"]
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+        resources {
+            excludes += ["META-INF/**"]
+        }
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

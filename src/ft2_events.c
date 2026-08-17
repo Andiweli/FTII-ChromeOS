@@ -32,6 +32,9 @@
 #include "ft2_sample_ed.h"
 #include "ft2_sample_ed_features.h"
 #include "ft2_structs.h"
+#ifdef __ANDROID__
+#include "ft2_android.h"
+#endif
 
 #define CRASH_TEXT "Oh no! The Fasttracker II clone has crashed...\nA backup of the song was hopefully " \
                    "saved to the current module directory.\n\nPlease report this bug if you can.\n" \
@@ -343,6 +346,13 @@ static void exceptionHandler(int32_t signal)
 
 void setupCrashHandler(void)
 {
+#ifdef __ANDROID__
+	/* Calling UI and file-saving code from a POSIX signal handler is not safe in
+	** Android's Activity lifecycle. Android/ChromeOS records native crashes,
+	** while clean exits are handled by the dedicated tracker process.
+	*/
+	return;
+#else
 #ifndef _DEBUG
 #ifdef _WIN32
 	SetUnhandledExceptionFilter(exceptionHandler);
@@ -361,12 +371,22 @@ void setupCrashHandler(void)
 	sigaction(SIGSEGV, &act, &oldAct);
 #endif
 #endif
+#endif
 }
 
 void handleWaitVblQuirk(SDL_Event *event)
 {
 	if (event->type == SDL_WINDOWEVENT)
 	{
+		if (event->window.event == SDL_WINDOWEVENT_RESIZED ||
+			event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
+			event->window.event == SDL_WINDOWEVENT_MAXIMIZED ||
+			event->window.event == SDL_WINDOWEVENT_RESTORED)
+		{
+			updateRenderSizeVars();
+			updateMouseScaling();
+		}
+
 		if (event->window.event == SDL_WINDOWEVENT_HIDDEN)
 			video.windowHidden = true;
 		else if (event->window.event == SDL_WINDOWEVENT_SHOWN)
@@ -519,7 +539,12 @@ static void handleSDLEvents(void)
 #endif
 
 		if (editor.throwExit)
+		{
+#ifdef __ANDROID__
+			ft2AndroidPrepareForExit();
+#endif
 			editor.programRunning = false;
+		}
 	}
 
 #ifdef HAS_MIDI

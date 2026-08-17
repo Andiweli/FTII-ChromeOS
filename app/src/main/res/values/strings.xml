@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FT II</string>
+    <string name="workspace_title">FT II</string>
+    <string name="workspace_summary">Module, Instrumente und Samples</string>
+    <string name="storage_access_title">Zugriff auf Play-Dateien</string>
+    <string name="storage_access_message">FT II kann Module und Samples direkt aus den ChromeOS-Play-Dateien öffnen und dort speichern. Dafür muss einmalig „Zugriff auf alle Dateien“ erlaubt werden.</string>
+    <string name="storage_access_allow">Freigeben</string>
+    <string name="storage_access_workspace_only">Nur Workspace</string>
+</resources>

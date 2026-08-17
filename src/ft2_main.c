@@ -38,6 +38,9 @@
 #include "ft2_structs.h"
 #include "ft2_hpc.h"
 #include "ft2_smpfx.h"
+#ifdef __ANDROID__
+#include "ft2_android.h"
+#endif
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
@@ -51,6 +54,10 @@ static void disableWasapi(void);
 
 int main(int argc, char *argv[])
 {
+#ifdef __ANDROID__
+	bool rollbackLowLatencyAudio = false;
+#endif
+
 #ifdef _WIN32 // test for SSE/SSE2 presence very first, to make sure no SSE/SSE2 code is attempted to be ran
 	if (!SDL_HasSSE())
 	{
@@ -83,6 +90,16 @@ int main(int argc, char *argv[])
 
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 	SDL_EnableScreenSaver(); // allow screensaver to activate
+
+#ifdef __ANDROID__
+	/* ChromeOS uses real mouse/keyboard input. Do not synthesize duplicate mouse
+	** events from an incidental touch or block the native loop while unfocused.
+	*/
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+	SDL_SetHint(SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0");
+	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
 
 	initializeVars();
 	setupCrashHandler();
@@ -140,6 +157,15 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+#ifdef __ANDROID__
+	if (!ft2AndroidSetupWorkspace())
+	{
+		showErrorMsgBox("Couldn't initialize the FT2 Workspace directory.");
+		SDL_Quit();
+		return 1;
+	}
+#endif
+
 	SDL_SetHint("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1");
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
@@ -161,6 +187,21 @@ int main(int argc, char *argv[])
 	}
 
 	loadConfigOrSetDefaults(); // config must be loaded at this exact point
+
+#ifdef __ANDROID__
+	ft2AndroidSetFullscreenPreference((config.windowFlags & START_IN_FULLSCR) != 0);
+
+	/* Version 1.0.8 temporarily migrated existing installations to a 512-frame
+	** AAudio setup. Restore only those installations once to the last proven
+	** 1024-frame setting; later user changes remain respected.
+	*/
+	if (ft2AndroidNeedsAudioRollback())
+	{
+		config.specialFlags &= ~(BUFFSIZE_512 | BUFFSIZE_2048);
+		config.specialFlags |= BUFFSIZE_1024;
+		rollbackLowLatencyAudio = true;
+	}
+#endif
 
 	if (!setupWindow() || !setupRenderer())
 	{
@@ -212,6 +253,17 @@ int main(int argc, char *argv[])
 		cleanUpAndExit();
 		return 1;
 	}
+
+#ifdef __ANDROID__
+	/* Mark the one-time rollback only after the 1024-frame setting was saved.
+	** If a write or device setup fails, the next start safely retries it.
+	*/
+	if (rollbackLowLatencyAudio && (config.specialFlags & BUFFSIZE_1024) &&
+		saveConfig(CONFIG_HIDE_ERRORS))
+	{
+		ft2AndroidMarkAudioRolledBack();
+	}
+#endif
 
 	pauseAudio();
 	resumeAudio();

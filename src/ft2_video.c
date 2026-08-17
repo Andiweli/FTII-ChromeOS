@@ -266,7 +266,7 @@ void showErrorMsgBox(const char *fmt, ...)
 #endif
 }
 
-static void updateRenderSizeVars(void)
+void updateRenderSizeVars(void)
 {
 	int32_t widthInPixels, heightInPixels;
 	SDL_DisplayMode dm;
@@ -301,6 +301,19 @@ static void updateRenderSizeVars(void)
 		}
 		else
 		{
+			#ifdef __ANDROID__
+			/* ChromeOS fullscreen and maximized windows are not guaranteed to be
+			** integer multiples of FT2's 632x400 framebuffer. Use all available
+			** space while preserving the aspect ratio.
+			*/
+			const double scaleX = video.windowW / (double)SCREEN_W;
+			const double scaleY = video.windowH / (double)SCREEN_H;
+			const double scale = MIN(scaleX, scaleY);
+			video.renderW = MAX(1, (int32_t)floor(SCREEN_W * scale));
+			video.renderH = MAX(1, (int32_t)floor(SCREEN_H * scale));
+			video.renderX = (video.windowW - video.renderW) / 2;
+			video.renderY = (video.windowH - video.renderH) / 2;
+			#else
 			// centered windowed fullscreen, with pixel-perfect integer upscaling
 
 			const int32_t maxUpscaleFactor = MIN(video.windowW / SCREEN_W, video.windowH / SCREEN_H);
@@ -308,6 +321,7 @@ static void updateRenderSizeVars(void)
 			video.renderH = SCREEN_H * maxUpscaleFactor;
 			video.renderX = (video.windowW - video.renderW) / 2;
 			video.renderY = (video.windowH - video.renderH) / 2;
+			#endif
 
 			// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
 			SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
@@ -325,12 +339,44 @@ static void updateRenderSizeVars(void)
 	{
 		// windowed mode
 
+#ifdef __ANDROID__
+		/* Android activities always render into the complete surface. Preserve the
+		** original 632:400 tracker aspect ratio in resizable ChromeOS windows.
+		*/
+		if (config.specialFlags2 & STRETCH_IMAGE)
+		{
+			video.renderW = video.windowW;
+			video.renderH = video.windowH;
+		}
+		else
+		{
+			const double scaleX = video.windowW / (double)SCREEN_W;
+			const double scaleY = video.windowH / (double)SCREEN_H;
+			const double scale = MIN(scaleX, scaleY);
+			video.renderW = MAX(1, (int32_t)floor(SCREEN_W * scale));
+			video.renderH = MAX(1, (int32_t)floor(SCREEN_H * scale));
+			video.renderX = (video.windowW - video.renderW) / 2;
+			video.renderY = (video.windowH - video.renderH) / 2;
+		}
+#else
 		SDL_GetWindowSize(video.window, &video.renderW, &video.renderH);
+#endif
 
 		// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
 		SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
 		video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
 		video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
+
+#ifdef __ANDROID__
+		if (!(config.specialFlags2 & STRETCH_IMAGE))
+		{
+			video.renderRect.x = (int32_t)floor(video.renderX * video.dDpiZoomFactorX);
+			video.renderRect.y = (int32_t)floor(video.renderY * video.dDpiZoomFactorY);
+			video.renderRect.w = (int32_t)floor(video.renderW * video.dDpiZoomFactorX);
+			video.renderRect.h = (int32_t)floor(video.renderH * video.dDpiZoomFactorY);
+			video.useCustomRenderRect = true;
+		}
+#endif
 	}
 
 	// "hardware mouse" calculations
@@ -850,6 +896,12 @@ void updateWindowTitle(bool forceUpdate)
 	if (!forceUpdate && songIsModified == song.isModified)
 		return; // window title is already set to the same
 
+#ifdef __ANDROID__
+	const char *applicationName = "FT II";
+#else
+	const char *applicationName = "Fasttracker II clone";
+#endif
+
 	char *songTitle = getCurrSongFilename();
 	if (songTitle != NULL)
 	{
@@ -857,17 +909,17 @@ void updateWindowTitle(bool forceUpdate)
 		strncpy(songTitleTrunc, songTitle, sizeof (songTitleTrunc)-1);
 		songTitleTrunc[sizeof (songTitleTrunc)-1] = '\0';
 
-			if (song.isModified)
-				sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\" (unsaved)", PROG_VER_STR, songTitleTrunc);
-			else
-				sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\"", PROG_VER_STR, songTitleTrunc);
+		if (song.isModified)
+			sprintf(wndTitle, "%s v%s - \"%s\" (unsaved)", applicationName, PROG_VER_STR, songTitleTrunc);
+		else
+			sprintf(wndTitle, "%s v%s - \"%s\"", applicationName, PROG_VER_STR, songTitleTrunc);
 	}
 	else
 	{
 		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\" (unsaved)", PROG_VER_STR);
+			sprintf(wndTitle, "%s v%s - \"untitled\" (unsaved)", applicationName, PROG_VER_STR);
 		else
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\"", PROG_VER_STR);
+			sprintf(wndTitle, "%s v%s - \"untitled\"", applicationName, PROG_VER_STR);
 	}
 
 	SDL_SetWindowTitle(video.window, wndTitle);
@@ -907,6 +959,12 @@ bool setupWindow(void)
 	video.vsync60HzPresent = false;
 
 	uint32_t windowFlags = SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef __ANDROID__
+	/* Required for ChromeOS desktop windowing. Without SDL_WINDOW_RESIZABLE,
+	** SDL asks Android to keep the original 632x400 logical window geometry.
+	*/
+	windowFlags |= SDL_WINDOW_RESIZABLE;
+#endif
 #if defined (__APPLE__) || defined (_WIN32) // yet another quirk!
 	windowFlags |= SDL_WINDOW_HIDDEN;
 #endif

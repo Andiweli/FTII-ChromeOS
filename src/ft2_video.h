@@ -51,6 +51,7 @@ void beginFPSCounter(void);
 void endFPSCounter(void);
 void flipFrame(void);
 void showErrorMsgBox(const char *fmt, ...);
+void updateRenderSizeVars(void);
 void updateWindowTitle(bool forceUpdate);
 void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatus);
 bool setupWindow(void);

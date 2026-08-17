@@ -218,6 +218,14 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 
 void setMousePosToCenter(void)
 {
+#ifdef __ANDROID__
+	/* ChromeOS can letterbox FT2 inside both maximized and free-form windows.
+	** SDL_WarpMouseInWindow() expects surface-local coordinates, so include the
+	** render offset regardless of FT2's own fullscreen flag.
+	*/
+	mouse.setPosX = video.renderX + (video.renderW >> 1);
+	mouse.setPosY = video.renderY + (video.renderH >> 1);
+#else
 	if (video.fullscreen)
 	{
 		mouse.setPosX = video.displayW >> 1;
@@ -228,6 +236,7 @@ void setMousePosToCenter(void)
 		mouse.setPosX = video.renderW >> 1;
 		mouse.setPosY = video.renderH >> 1;
 	}
+#endif
 
 	mouse.setPosFlag = true;
 }
@@ -856,6 +865,15 @@ void readMouseXY(void)
 		return;
 	}
 
+#ifdef __ANDROID__
+	/* SDL's Android mouse coordinates are already local to the Surface. Global
+	** coordinates and window positions can use different coordinate spaces in
+	** ChromeOS desktop mode, especially immediately after maximize/restore.
+	*/
+	mouse.buttonState = SDL_GetMouseState(&mx, &my);
+	mouse.absX = mx;
+	mouse.absY = my;
+#else
 	if (video.fullscreen)
 	{
 		mouse.buttonState = SDL_GetMouseState(&mx, &my);
@@ -876,11 +894,17 @@ void readMouseXY(void)
 		mx -= windowX;
 		my -= windowY;
 	}
+#endif
 
 	mouse.rawX = mx;
 	mouse.rawY = my;
 
-	if (video.fullscreen)
+#if defined __ANDROID__
+	const bool mouseUsesRenderArea = true;
+#else
+	const bool mouseUsesRenderArea = video.fullscreen;
+#endif
+	if (mouseUsesRenderArea)
 	{
 		// if software mouse is enabled, warp mouse inside render space
 		if (!(config.specialFlags2 & HARDWARE_MOUSE))
@@ -913,7 +937,7 @@ void readMouseXY(void)
 				SDL_WarpMouseInWindow(video.window, mx, my);
 		}
 
-		// convert fullscreen coords to window (centered image) coords
+		// convert surface coords to FT2's centered render-area coordinates
 		mx -= video.renderX;
 		my -= video.renderY;
 	}

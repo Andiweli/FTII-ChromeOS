@@ -1,0 +1,29 @@
+<resources>
+    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">#101010</item>
+        <item name="android:statusBarColor">#101010</item>
+        <item name="android:navigationBarColor">#101010</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">#506AA2</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowSplashScreenBackground">#101010</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#4D619A</item>
+        <item name="android:windowAnimationStyle">@style/NoWindowAnimation</item>
+    </style>
+
+    <style name="NoWindowAnimation" parent="android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/no_animation</item>
+        <item name="android:activityOpenExitAnimation">@anim/no_animation</item>
+        <item name="android:activityCloseEnterAnimation">@anim/no_animation</item>
+        <item name="android:activityCloseExitAnimation">@anim/no_animation</item>
+        <item name="android:taskOpenEnterAnimation">@anim/no_animation</item>
+        <item name="android:taskOpenExitAnimation">@anim/no_animation</item>
+        <item name="android:taskCloseEnterAnimation">@anim/no_animation</item>
+        <item name="android:taskCloseExitAnimation">@anim/no_animation</item>
+    </style>
+</resources>

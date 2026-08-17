@@ -24,3 +24,15 @@ vs2026_project/ft2-clone/Debug/*
 *.iobj
 *.enc
 release/macos/ft2-clone-macos.app/Contents/MacOS/ft2-clone-macos
+
+# Android Studio / Gradle / CMake
+.gradle/
+.idea/
+local.properties
+**/.cxx/
+**/build/
+*.apk
+*.aab
+*.jks
+*.keystore
+captures/

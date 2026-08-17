@@ -32,6 +32,9 @@
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#ifdef __ANDROID__
+#include "ft2_android.h"
+#endif
 
 config_t config; // globalized
 
@@ -253,6 +256,10 @@ void resetConfig(void)
 	setToDefaultAudioOutputDevice();
 	setToDefaultAudioInputDevice();
 
+#ifdef __ANDROID__
+	ft2AndroidSetFullscreenPreference((config.windowFlags & START_IN_FULLSCR) != 0);
+#endif
+
 	saveConfig(false);
 
 	// redraw new changes
@@ -364,6 +371,10 @@ void loadConfig2(void) // called by "Load config" button
 	const uint8_t oldSpecialFlags2 = config.specialFlags2;
 
 	loadConfig(CONFIG_SHOW_ERRORS);
+
+#ifdef __ANDROID__
+	ft2AndroidSetFullscreenPreference((config.windowFlags & START_IN_FULLSCR) != 0);
+#endif
 
 	// redraw new changes
 	showTopScreen(DONT_RESTORE_SCREENS);
@@ -569,6 +580,29 @@ static void setConfigFileLocation(void) // kinda hackish
 	free(oldPathU);
 
 	UNICHAR_STRCAT(editor.configFileLocationU, L"\\FT2.CFG");
+
+	// Android / ChromeOS
+#elif defined __ANDROID__
+	char *prefPath = SDL_GetPrefPath("AST", "FT2Clone");
+	if (prefPath == NULL)
+	{
+		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
+		return;
+	}
+
+	const size_t prefPathLen = strlen(prefPath);
+	const size_t ft2DotCfgStrLen = strlen("FT2.CFG");
+	editor.configFileLocationU = (UNICHAR *)malloc(prefPathLen + ft2DotCfgStrLen + 1);
+	if (editor.configFileLocationU == NULL)
+	{
+		SDL_free(prefPath);
+		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
+		return;
+	}
+
+	memcpy(editor.configFileLocationU, prefPath, prefPathLen);
+	memcpy(editor.configFileLocationU + prefPathLen, "FT2.CFG", ft2DotCfgStrLen + 1);
+	SDL_free(prefPath);
 
 	// OS X / macOS
 #elif defined __APPLE__
@@ -2137,6 +2171,16 @@ void cbVsyncOff(void)
 void cbFullScreen(void)
 {
 	config.windowFlags ^= START_IN_FULLSCR;
+
+#ifdef __ANDROID__
+	/* The Android launcher must know this value before SDL starts so it can
+	** request a maximized ChromeOS root window. Persist the checkbox directly;
+	** otherwise it only takes effect when the user separately presses
+	** "Save config" (or has Auto save enabled).
+	*/
+	ft2AndroidSetFullscreenPreference((config.windowFlags & START_IN_FULLSCR) != 0);
+	saveConfig(CONFIG_HIDE_ERRORS);
+#endif
 
 	if (!(config.dontShowAgainFlags & DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG))
 		okBox(0, "System message", "This setting is not applied until you close and reopen the program.", configToggleNotYetAppliedWarning);

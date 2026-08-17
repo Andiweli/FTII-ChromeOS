@@ -17,7 +17,6 @@
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h> // for fts_open() and stuff in recursiveDelete()
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
@@ -40,6 +39,9 @@
 #include "ft2_video.h"
 #include "ft2_inst_ed.h"
 #include "ft2_structs.h"
+#ifdef __ANDROID__
+#include "ft2_android.h"
+#endif
 
 // hide POSIX warnings for chdir()
 #ifdef _MSC_VER
@@ -500,46 +502,46 @@ bool fileExistsAnsi(char *str)
 
 static bool deleteDirRecursive(UNICHAR *strU)
 {
-	FTSENT *curr;
-	char *files[] = { (char *)(strU), NULL };
-
-	FTS *ftsp = fts_open(files, FTS_NOCHDIR | FTS_PHYSICAL | FTS_XDEV, NULL);
-	if (!ftsp)
+	DIR *directory = opendir(strU);
+	if (directory == NULL)
 		return false;
 
 	bool ret = true;
-	while ((curr = fts_read(ftsp)))
+	struct dirent *entry;
+	while ((entry = readdir(directory)) != NULL)
 	{
-		switch (curr->fts_info)
+		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+			continue;
+
+		char childPath[PATH_MAX + 1];
+		const int32_t length = snprintf(childPath, sizeof (childPath), "%s/%s", strU, entry->d_name);
+		if (length <= 0 || (size_t)length >= sizeof (childPath))
 		{
-			default:
-			case FTS_NS:
-			case FTS_DNR:
-			case FTS_ERR:
 				ret = false;
-			break;
+			continue;
+		}
 
-			case FTS_D:
-			case FTS_DC:
-			case FTS_DOT:
-			case FTS_NSOK:
-				break;
+		struct stat status;
+		if (lstat(childPath, &status) != 0)
+		{
+			ret = false;
+			continue;
+		}
 
-			case FTS_DP:
-			case FTS_F:
-			case FTS_SL:
-			case FTS_SLNONE:
-			case FTS_DEFAULT:
-			{
-				if (remove(curr->fts_accpath) < 0)
-					ret = false;
-			}
-			break;
+		if (S_ISDIR(status.st_mode))
+		{
+			if (!deleteDirRecursive(childPath))
+				ret = false;
+		}
+		else if (unlink(childPath) != 0)
+		{
+			ret = false;
 		}
 	}
 
-	if (ftsp != NULL)
-		fts_close(ftsp);
+	closedir(directory);
+	if (rmdir(strU) != 0)
+		ret = false;
 
 	return ret;
 }
@@ -588,6 +590,11 @@ static void openDirectory(UNICHAR *strU)
 
 bool diskOpGoParent(void)
 {
+#ifdef __ANDROID__
+	if (ft2AndroidAtWorkspaceRoot())
+		return false;
+#endif
+
 	if (chdir("..") == 0)
 	{
 		editor.diskOpReadDir = true;
@@ -1288,12 +1295,17 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 		if (nameLen == 1 && name[0] == '.')
 			goto skipEntry;
 
-		// macOS/Linux: skip '..' directory if we're in root
+		// macOS/Linux/Android: skip '..' directory if we're in the exposed root
 #ifndef _WIN32
 		if (nameLen == 2 && name[0] == '.' && name[1] == '.')
 		{
+		#ifdef __ANDROID__
+			if (ft2AndroidAtWorkspaceRoot())
+				goto skipEntry;
+		#else
 			if (FReq_CurPathU[0] == '/' && FReq_CurPathU[1] == '\0')
 				goto skipEntry;
+		#endif
 		}
 #endif
 	}
@@ -2371,6 +2383,8 @@ void pbDiskOpRoot(void)
 {
 #ifdef _WIN32
 	openDirectory(L"\\");
+#elif defined __ANDROID__
+	openDirectory((UNICHAR *)ft2AndroidGetWorkspacePath());
 #else
 	openDirectory("/");
 #endif

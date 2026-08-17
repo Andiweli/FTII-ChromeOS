@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include domain="file" path="workspace/" />
+    <exclude domain="file" path="FT2.CFG" />
+    <exclude domain="file" path="audiodev.ini" />
+</full-backup-content>
