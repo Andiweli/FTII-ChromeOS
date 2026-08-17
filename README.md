@@ -1,4 +1,4 @@
-# FT II for Android and ChromeOS
+# ![Logo FT2](https://github.com/user-attachments/assets/7071a683-07ab-45cd-a5ae-aee8f29ce7b9) FT II for Android and ChromeOS
 
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20ChromeOS-4285F4)
 ![Architecture](https://img.shields.io/badge/ABI-ARM64%20%7C%20x86__64-34A853)
@@ -21,6 +21,8 @@ This fork adds the platform integration required to make the desktop-oriented FT
 - Adaptive launcher icon and ChromeOS-friendly application/window presentation
 
 The tracker core and its original note mapping remain unchanged wherever possible. Platform-specific fixes are kept in the Android, SDL and window-management layers.
+
+<img width="1920" height="1080" alt="ft2-chromeos" src="https://github.com/user-attachments/assets/12fbeca7-cfdf-4abb-9582-21c1b01ba9c0" />
 
 ## About the original FT2 clone
 
