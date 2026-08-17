@@ -34,6 +34,16 @@ The original clone targets Windows, macOS and Linux and adds useful features suc
 
 To learn more about the historic tracker, see [FastTracker II on Wikipedia](https://en.wikipedia.org/wiki/FastTracker_2).
 
+## ❤️ Support
+
+If you enjoy this project and would like to support my work, you can make a small contribution via PayPal.
+
+Your support helps me spend more time maintaining existing projects, fixing bugs, improving compatibility, and working on new features.
+
+[![Support via PayPal](https://img.shields.io/badge/Support%20via-PayPal-0070BA?logo=paypal\&logoColor=white)](https://paypal.me/andiweli)
+
+Thank you for your support!
+
 ## Legal
 
 The source code is distributed under the [BSD 3-Clause License](LICENSE).
